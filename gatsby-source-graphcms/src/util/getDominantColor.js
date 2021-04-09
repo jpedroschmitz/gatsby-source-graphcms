@@ -14,10 +14,8 @@ export async function getImageDominantColor({ url, cache }) {
     const backgroundColor = await getDominantColor(filePath)
 
     return backgroundColor
-  } catch {
-    console.error(
-      `[${PLUGIN_NAME}] In order to use the dominant color placeholder, you need to install gatsby-plugin-sharp`
-    )
+  } catch (error) {
+    console.error(`[${PLUGIN_NAME}]`, error)
 
     return `rgba(0, 0, 0, 0.5)`
   }

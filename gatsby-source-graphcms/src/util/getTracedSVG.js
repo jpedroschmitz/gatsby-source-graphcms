@@ -26,9 +26,7 @@ export async function getTracedSVG({ url, internal, filename, cache }) {
     })
 
     return image
-  } catch (err) {
-    console.error(
-      `[${PLUGIN_NAME}] In order to use the traced svg placeholder, you need to install gatsby-plugin-sharp`
-    )
+  } catch (error) {
+    console.error(`[${PLUGIN_NAME}]`, error)
   }
 }

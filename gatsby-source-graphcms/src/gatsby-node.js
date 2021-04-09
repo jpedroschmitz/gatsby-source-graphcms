@@ -312,14 +312,15 @@ export function createSchemaCustomization(
     typePrefix = 'GraphCMS_',
   }
 ) {
-  if (downloadLocalImages)
+  if (downloadLocalImages) {
     createTypes(`
       type ${typePrefix}Asset {
         localFile: File @link
       }
     `)
+  }
 
-  if (buildMarkdownNodes)
+  if (buildMarkdownNodes) {
     createTypes(`
       type ${typePrefix}MarkdownNode implements Node {
         id: ID!
@@ -328,6 +329,13 @@ export function createSchemaCustomization(
         markdownNode: ${typePrefix}MarkdownNode @link
       }
     `)
+  }
+}
+
+const isImage = (format) => {
+  const validImageFormats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif']
+
+  return validImageFormats.includes(format)
 }
 
 const generateImageSource = (
@@ -338,6 +346,14 @@ const generateImageSource = (
   fit = 'clip',
   { quality = 100 }
 ) => {
+  if (!isImage(format)) {
+    console.warn(
+      `[${PLUGIN_NAME}] Invalid image format "${format}". Supported types are png, jpg, webp, bmp, gif"`
+    )
+
+    return undefined
+  }
+
   const src = `https://media.graphcms.com/resize=width:${width},height:${height},fit:${fit}/output=quality:${quality}/${baseURL}`
 
   return { src, width, height, format }
@@ -348,47 +364,52 @@ function makeResolveGatsbyImageData(cache) {
     { handle: filename, height, mimeType, width, url, internal },
     options
   ) {
-    const imageDataArgs = {
-      ...options,
-      pluginName: PLUGIN_NAME,
-      sourceMetadata: { format: mimeType.split('/')[1], height, width },
-      filename,
-      generateImageSource,
-      options,
-    }
+    const format = mimeType.split('/')[1]
+    console.log(`${format}: ${isImage(format)}`)
 
-    if (options?.placeholder === `BLURRED`) {
-      const lowResImageURL = getLowResolutionImageURL(imageDataArgs)
-
-      const imageBase64 = await getImageBase64({
-        url: lowResImageURL,
-        cache,
-      })
-
-      imageDataArgs.placeholderURL = getBase64DataURI({
-        imageBase64,
-      })
-    }
-
-    if (options?.placeholder === `DOMINANT_COLOR`) {
-      const lowResImageURL = getLowResolutionImageURL(imageDataArgs)
-
-      imageDataArgs.backgroundColor = await getImageDominantColor({
-        url: lowResImageURL,
-        cache,
-      })
-    }
-
-    if (options?.placeholder === `TRACED_SVG`) {
-      imageDataArgs.placeholderURL = await getTracedSVG({
-        url,
-        internal,
+    if (isImage(format)) {
+      const imageDataArgs = {
+        ...options,
+        pluginName: PLUGIN_NAME,
+        sourceMetadata: { format, height, width },
         filename,
-        cache,
-      })
-    }
+        generateImageSource,
+        options,
+      }
 
-    return generateImageData(imageDataArgs)
+      if (options?.placeholder === `BLURRED`) {
+        const lowResImageURL = getLowResolutionImageURL(imageDataArgs)
+
+        const imageBase64 = await getImageBase64({
+          url: lowResImageURL,
+          cache,
+        })
+
+        imageDataArgs.placeholderURL = getBase64DataURI({
+          imageBase64,
+        })
+      }
+
+      if (options?.placeholder === `DOMINANT_COLOR`) {
+        const lowResImageURL = getLowResolutionImageURL(imageDataArgs)
+
+        imageDataArgs.backgroundColor = await getImageDominantColor({
+          url: lowResImageURL,
+          cache,
+        })
+      }
+
+      if (options?.placeholder === `TRACED_SVG`) {
+        imageDataArgs.placeholderURL = await getTracedSVG({
+          url,
+          internal,
+          filename,
+          cache,
+        })
+      }
+
+      return generateImageData(imageDataArgs)
+    }
   }
 }
 
